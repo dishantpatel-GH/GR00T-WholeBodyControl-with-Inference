@@ -1,3 +1,9 @@
+"""
+G1 Robot Environment for Real Robot Control.
+
+This module provides the G1Env class for interfacing with the Unitree G1 robot.
+"""
+
 from copy import deepcopy
 from typing import Dict
 
@@ -7,16 +13,16 @@ from scipy.spatial.transform import Rotation as R
 
 from gr00t_wbc.control.base.humanoid_env import Hands, HumanoidEnv
 from gr00t_wbc.control.envs.g1.g1_body import G1Body
-# --- Updated Import to include G1InspireHand ---
 from gr00t_wbc.control.envs.g1.g1_hand import G1ThreeFingerHand, G1InspireHand
-from gr00t_wbc.control.envs.g1.sim.simulator_factory import SimulatorFactory, init_channel
+from gr00t_wbc.control.envs.g1.sim.simulator_factory import init_channel
 from gr00t_wbc.control.envs.g1.utils.joint_safety import JointSafetyMonitor
-from gr00t_wbc.control.robot_model.instantiation.g1 import instantiate_g1_robot_model
 from gr00t_wbc.control.robot_model.robot_model import RobotModel
 from gr00t_wbc.control.utils.ros_utils import ROSManager
 
 
 class G1Env(HumanoidEnv):
+    """Environment for controlling the Unitree G1 robot."""
+
     def __init__(
         self,
         env_name: str = "default",
@@ -31,11 +37,12 @@ class G1Env(HumanoidEnv):
 
         # Initialize safety monitor (visualization disabled)
         self.safety_monitor = JointSafetyMonitor(
-            robot_model, enable_viz=False, env_type=self.config.get("ENV_TYPE", "real")
+            robot_model, enable_viz=False, env_type="real"
         )
         self.last_obs = None
         self.last_safety_ok = True  # Track last safety status from queue_action
 
+        # Initialize Unitree SDK communication channel
         init_channel(config=self.config)
 
         # Initialize body and hands
@@ -43,7 +50,7 @@ class G1Env(HumanoidEnv):
 
         self.with_hands = config.get("with_hands", False)
         # Check config for hand type (Default to 'dex3' if not specified)
-        self.hand_type = config.get("HAND_TYPE", "dex3") 
+        self.hand_type = config.get("HAND_TYPE", "dex3")
 
         # Gravity compensation settings
         self.enable_gravity_compensation = config.get("enable_gravity_compensation", False)
@@ -53,7 +60,7 @@ class G1Env(HumanoidEnv):
             print(
                 f"Gravity compensation enabled for joint groups: {self.gravity_compensation_joints}"
             )
-        
+
         if self.with_hands:
             self._hands = Hands()
             if self.hand_type == "inspire":
@@ -65,28 +72,8 @@ class G1Env(HumanoidEnv):
                 self._hands.left = G1ThreeFingerHand(is_left=True)
                 self._hands.right = G1ThreeFingerHand(is_left=False)
 
-        # Initialize simulator if in simulation mode
-        self.use_sim = self.config.get("ENV_TYPE") == "sim"
-
-        if self.use_sim:
-            # Create simulator using factory
-            kwargs.update(
-                {
-                    "onscreen": self.config.get("ENABLE_ONSCREEN", True),
-                    "offscreen": self.config.get("ENABLE_OFFSCREEN", False),
-                }
-            )
-            self.sim = SimulatorFactory.create_simulator(
-                config=self.config,
-                env_name=env_name,
-                wbc_version=wbc_version,
-                body_ik_solver_settings_type=kwargs.get("body_ik_solver_settings_type", "default"),
-                **kwargs,
-            )
-        else:
-            self.sim = None
-            # using the real robot
-            self.calibrate_hands()
+        # Calibrate hands for real robot
+        self.calibrate_hands()
 
         # Initialize ROS 2 node
         self.ros_manager = ROSManager(node_name="g1_env")
@@ -96,16 +83,6 @@ class G1Env(HumanoidEnv):
         self.visualize_delay = False
         self.print_delay_interval = 100
         self.cnt = 0
-
-    def start_simulator(self):
-        # image publish disabled since the sim is running in a sub-thread
-        SimulatorFactory.start_simulator(self.sim, as_thread=True, enable_image_publish=False)
-
-    def step_simulator(self):
-        sim_num_steps = int(self.config["REWARD_DT"] / self.config["SIMULATE_DT"])
-        for _ in range(sim_num_steps):
-            self.sim.sim_env.sim_step()
-        self.sim.sim_env.update_viewer()
 
     def body(self) -> G1Body:
         return self._body
@@ -118,7 +95,7 @@ class G1Env(HumanoidEnv):
         return self._hands
 
     def observe(self) -> Dict[str, any]:
-        # Get observations from body and hands
+        """Get observations from body and hands."""
         body_obs = self.body().observe()
 
         body_q = body_obs["body_q"]
@@ -129,7 +106,7 @@ class G1Env(HumanoidEnv):
         if self.with_hands:
             left_hand_obs = self.hands().left.observe()
             right_hand_obs = self.hands().right.observe()
-            
+
             # These will now come from the appropriate hand class (Dex3 or Inspire)
             left_hand_q = left_hand_obs["hand_q"]
             right_hand_q = right_hand_obs["hand_q"]
@@ -140,7 +117,7 @@ class G1Env(HumanoidEnv):
             left_hand_tau_est = left_hand_obs["hand_tau_est"]
             right_hand_tau_est = right_hand_obs["hand_tau_est"]
 
-            # Body and hand joint measurements come in actuator order, so we need to convert them to joint order
+            # Body and hand joint measurements come in actuator order, convert to joint order
             whole_q = self.robot_model.get_configuration_from_actuated_joints(
                 body_actuated_joint_values=body_q,
                 left_hand_actuated_joint_values=left_hand_q,
@@ -162,7 +139,7 @@ class G1Env(HumanoidEnv):
                 right_hand_actuated_joint_values=right_hand_tau_est,
             )
         else:
-            # Body and hand joint measurements come in actuator order, so we need to convert them to joint order
+            # Body only - convert from actuator order to joint order
             whole_q = self.robot_model.get_configuration_from_actuated_joints(
                 body_actuated_joint_values=body_q,
             )
@@ -191,9 +168,6 @@ class G1Env(HumanoidEnv):
             "torso_ang_vel": body_obs["torso_ang_vel"],
         }
 
-        if self.use_sim and self.sim:
-            obs.update(self.sim.get_privileged_obs())
-
         # Store last observation for safety checking
         self.last_obs = obs
 
@@ -201,7 +175,6 @@ class G1Env(HumanoidEnv):
 
     @property
     def observation_space(self) -> gym.Space:
-        # @todo: check if the low and high bounds are correct for body_obs.
         q_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.robot_model.num_dofs,))
         dq_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.robot_model.num_dofs,))
         ddq_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.robot_model.num_dofs,))
@@ -224,6 +197,7 @@ class G1Env(HumanoidEnv):
         )
 
     def queue_action(self, action: Dict[str, any]):
+        """Queue action to be sent to the robot."""
         # Safety check
         if self.last_obs is not None:
             safety_result = self.safety_monitor.handle_violations(self.last_obs, action)
@@ -254,9 +228,8 @@ class G1Env(HumanoidEnv):
         return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.robot_model.num_dofs,))
 
     def calibrate_hands(self):
-        """Calibrate the hand joint qpos if real robot"""
+        """Calibrate the hand joint qpos for real robot."""
         if self.with_hands:
-            # G1InspireHand.calibrate_hand() will log that it's skipping
             print("calibrating left hand")
             self.hands().left.calibrate_hand()
             print("calibrating right hand")
@@ -264,44 +237,16 @@ class G1Env(HumanoidEnv):
         else:
             print("Skipping hand calibration - hands disabled")
 
-    def set_ik_indicator(self, teleop_cmd):
-        """Set the IK indicators for the simulator"""
-        if self.config["SIMULATOR"] == "robocasa":
-            if "left_wrist" in teleop_cmd and "right_wrist" in teleop_cmd:
-                left_wrist_input_pose = teleop_cmd["left_wrist"]
-                right_wrist_input_pose = teleop_cmd["right_wrist"]
-                ik_wrapper = self.sim.env.env.unwrapped.env
-                ik_wrapper.set_target_poses_outside_env(
-                    [left_wrist_input_pose, right_wrist_input_pose]
-                )
-        else:
-            raise NotImplementedError("IK indicators are only implemented for robocasa simulator")
-
-    def set_sync_mode(self, sync_mode: bool, steps_per_action: int = 4):
-        """When set to True, the simulator will wait for the action to be sent to it"""
-        if self.config["SIMULATOR"] == "robocasa":
-            self.sim.set_sync_mode(sync_mode, steps_per_action)
-
     def reset(self):
-        if self.sim:
-            self.sim.reset()
+        """Reset the environment (no-op for real robot)."""
+        pass
 
     def close(self):
-        if self.sim:
-            self.sim.close()
-
-    def robot_model(self) -> RobotModel:
-        return self.robot_model
-
-    def get_reward(self):
-        if self.sim:
-            return self.sim.get_reward()
-
-    def reset_obj_pos(self):
-        if hasattr(self.sim, "base_env") and hasattr(self.sim.base_env, "reset_obj_pos"):
-            self.sim.base_env.reset_obj_pos()
+        """Close the environment (no-op for real robot)."""
+        pass
 
     def get_eef_obs(self, q: np.ndarray) -> Dict[str, np.ndarray]:
+        """Get end-effector observations using forward kinematics."""
         self.robot_model.cache_forward_kinematics(q)
         eef_obs = {}
         for side in ["left", "right"]:
@@ -324,12 +269,5 @@ class G1Env(HumanoidEnv):
         return self.last_safety_ok
 
     def handle_keyboard_button(self, key):
-        # Only handles keyboard buttons for the mujoco simulator for now.
-        if self.use_sim and self.config.get("SIMULATOR", "mujoco") == "mujoco":
-            self.sim.handle_keyboard_button(key)
-
-
-if __name__ == "__main__":
-    env = G1Env(robot_model=instantiate_g1_robot_model(), wbc_version="gear_wbc")
-    while True:
-        print(env.observe())
+        """Handle keyboard button press (no-op for real robot)."""
+        pass

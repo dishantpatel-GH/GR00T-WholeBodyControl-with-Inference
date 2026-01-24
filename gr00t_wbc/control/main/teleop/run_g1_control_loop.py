@@ -1,3 +1,10 @@
+"""
+G1 Robot Control Loop for Real Robot.
+
+This script runs the main control loop for the Unitree G1 robot,
+receiving commands from upper body policy and executing them via WBC.
+"""
+
 from copy import deepcopy
 import time
 
@@ -40,7 +47,7 @@ def main(config: ControlLoopConfig):
     ros_manager = ROSManager(node_name=CONTROL_NODE_NAME)
     node = ros_manager.node
 
-    # start the robot config server
+    # Start the robot config server
     ROSServiceServer(ROBOT_CONFIG_TOPIC, config.to_dict())
 
     wbc_config = config.load_wbc_yaml()
@@ -63,8 +70,6 @@ def main(config: ControlLoopConfig):
         config=wbc_config,
         wbc_version=config.wbc_version,
     )
-    if env.sim and not config.sim_sync_mode:
-        env.start_simulator()
 
     wbc_policy = get_wbc_policy("g1", robot_model, wbc_config, config.upper_body_joint_speed)
 
@@ -93,11 +98,6 @@ def main(config: ControlLoopConfig):
         while ros_manager.ok():
             t_start = time.monotonic()
             with telemetry.timer("total_loop"):
-                # Step simulator if in sync mode
-                with telemetry.timer("step_simulator"):
-                    if env.sim and config.sim_sync_mode:
-                        env.step_simulator()
-
                 # Measure observation time
                 with telemetry.timer("observe"):
                     obs = env.observe()
@@ -113,8 +113,6 @@ def main(config: ControlLoopConfig):
                     if upper_body_cmd:
                         wbc_goal = upper_body_cmd.copy()
                         last_teleop_cmd = upper_body_cmd.copy()
-                        if config.ik_indicator:
-                            env.set_ik_indicator(upper_body_cmd)
                     # Send goal to policy
                     if wbc_goal:
                         wbc_goal["interpolation_garbage_collection_time"] = t_now - 2 * (
@@ -163,31 +161,12 @@ def main(config: ControlLoopConfig):
                 if wbc_goal.get("toggle_data_abort", False):
                     dispatcher.handle_key("x")
 
-                if env.use_sim and wbc_goal.get("reset_env_and_policy", False):
-                    print("Resetting sim environment and policy")
-                    # Reset teleop policy & sim env
-                    dispatcher.handle_key("k")
-
-                    # Clear upper body commands
-                    upper_body_policy_subscriber._msg = None
-                    upper_body_cmd = {
-                        "target_upper_body_pose": obs["q"][
-                            robot_model.get_joint_group_indices("upper_body")
-                        ],
-                        "wrist_pose": DEFAULT_WRIST_POSE,
-                        "base_height_command": DEFAULT_BASE_HEIGHT,
-                        "navigate_cmd": DEFAULT_NAV_CMD,
-                    }
-                    last_teleop_cmd = upper_body_cmd.copy()
-
-                    time.sleep(0.5)
-
                 msg = deepcopy(obs)
-                for key in obs.keys():
+                for key in list(obs.keys()):
                     if key.endswith("_image"):
                         del msg[key]
 
-                # exporting data
+                # Exporting data
                 if last_teleop_cmd:
                     msg.update(
                         {
@@ -208,17 +187,14 @@ def main(config: ControlLoopConfig):
                 data_exp_pub.publish(msg)
                 end_time = time.monotonic()
 
-            if env.sim and (not env.sim.sim_thread or not env.sim.sim_thread.is_alive()):
-                raise RuntimeError("Simulator thread is not alive")
-
             rate.sleep()
 
-            # Log timing information every 100 iterations (roughly every 2 seconds at 50Hz)
+            # Log timing information
             if config.verbose_timing:
                 # When verbose timing is enabled, always show timing
                 telemetry.log_timing_info(context="G1 Control Loop", threshold=0.0)
-            elif (end_time - t_start) > (1 / config.control_frequency) and not config.sim_sync_mode:
-                # Only show timing when loop is slow and verbose_timing is disabled
+            elif (end_time - t_start) > (1 / config.control_frequency):
+                # Only show timing when loop is slow
                 telemetry.log_timing_info(context="G1 Control Loop Missed", threshold=0.001)
 
     except ros_manager.exceptions() as e:

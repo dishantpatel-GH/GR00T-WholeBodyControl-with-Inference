@@ -11,7 +11,8 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from gr00t_wbc.data.viz.rerun_viz import RerunViz
+# Note: RerunViz is imported lazily only when enable_viz=True
+# to avoid requiring rerun when running on real robot without visualization
 
 
 class JointSafetyMonitor:
@@ -120,6 +121,9 @@ class JointSafetyMonitor:
         self.viz = None
         if self.enable_viz:
             try:
+                # Lazy import to avoid requiring rerun when not using visualization
+                from gr00t_wbc.data.viz.rerun_viz import RerunViz
+                
                 self.viz = RerunViz(
                     image_keys=[],
                     tensor_keys=[
