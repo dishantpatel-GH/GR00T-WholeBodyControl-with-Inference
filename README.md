@@ -1,15 +1,10 @@
 # gr00t_wbc
 
-Software stack for loco-manipulation experiments across multiple humanoid platforms, with primary support for the Unitree G1. This repository provides whole-body control policies, a teleoperation stack, and a data exporter. 
+Software stack for loco-manipulation experiments across multiple humanoid platforms, with primary support for the Unitree G1. This repository provides whole-body control policies, and inference stack. 
 
 ---
 
 ## System Installation
-
-### Prerequisites
-- Ubuntu 22.04
-- NVIDIA GPU with a recent driver
-- Docker and NVIDIA Container Toolkit (required for GPU access inside the container)
 
 ### Repository Setup
 Install Git and Git LFS:
@@ -23,160 +18,22 @@ Clone the repository:
 ```bash
 mkdir -p ~/Projects
 cd ~/Projects
-git clone https://github.com/NVlabs/gr00t_wbc.git
-cd gr00t_wbc
+git clone https://github.com/dishantpatel-GH/GR00T-WholeBodyControl-with-Inference.git
+cd GR00T-WholeBodyControl-with-Inference
 ```
 
-### Docker Environment
-We provide a Docker image with all dependencies pre-installed.
+### Conda Environment
 
-Install a fresh image and start a container:
+Install a conda environment and with all the dependencies:
 ```bash
-./docker/run_docker.sh --install --root
+./install_minimal_real_robot.sh
 ```
-This pulls the latest `gr00t_wbc` image from `docker.io/nvgear`.
+This creates conda environment `gr00t_robot`.
 
-Start or re-enter a container:
+Start or re-enter a conda environment:
 ```bash
-./docker/run_docker.sh --root
+conda activate gr00t_robot
 ```
-
-Use `--root` to run as the `root` user. To run as a normal user, build the image locally:
-```bash
-./docker/run_docker.sh --build
-```
----
-
-## Running the Control Stack
-
-Once inside the container, the control policies can be launched directly.
-
-- Simulation:
-  ```bash
-  python gr00t_wbc/control/main/teleop/run_g1_control_loop.py
-  ```
-- Real robot: Ensure the host machine network is configured per the [G1 SDK Development Guide](https://support.unitree.com/home/en/G1_developer) and set a static IP at `192.168.123.222`, subnet mask `255.255.255.0`:
-  ```bash
-  python gr00t_wbc/control/main/teleop/run_g1_control_loop.py --interface real
-  ```
-
-Keyboard shortcuts (terminal window):
-- `]`: Activate policy
-- `o`: Deactivate policy
-- `9`: Release / Hold the robot
-- `w` / `s`: Move forward / backward
-- `a` / `d`: Strafe left / right
-- `q` / `e`: Rotate left / right
-- `z`: Zero navigation commands
-- `1` / `2`: Raise / lower the base height
-- `backspace` (viewer): Reset the robot in the visualizer
-
----
-
-## Running the Teleoperation Stack
-
-The teleoperation policy primarily uses Pico controllers for coordinated hand and body control. It also supports other teleoperation devices, including LeapMotion and HTC Vive with Nintendo Switch Joy-Con controllers.
-
-Keep `run_g1_control_loop.py` running, and in another terminal run:
-
-```bash
-python gr00t_wbc/control/main/teleop/run_teleop_policy_loop.py --hand_control_device=pico --body_control_device=pico
-```
-
-### Pico Setup and Controls
-Configure the teleop app on your Pico headset by following the [XR Robotics guidelines](https://github.com/XR-Robotics). 
-
-The necessary PC software is pre-installed in the Docker container. Only the [XRoboToolkit-PC-Service](https://github.com/XR-Robotics/XRoboToolkit-PC-Service) component is needed.
-
-Prerequisites: Connect the Pico to the same network as the host computer.
-
-Controller bindings:
-- `menu + left trigger`: Toggle lower-body policy
-- `menu + right trigger`: Toggle upper-body policy
-- `Left stick`: X/Y translation
-- `Right stick`: Yaw rotation
-- `L/R triggers`: Control hand grippers
-
-Pico unit test:
-```bash
-python gr00t_wbc/control/teleop/streamers/pico_streamer.py
-```
-
----
-
-## Running the Data Collection Stack in simulation
-
-Run the full stack (control loop, teleop policy, and camera forwarder) via the deployment helper:
-```bash
-python scripts/deploy_g1.py \
-    --interface sim \
-    --camera_host localhost \
-    --sim_in_single_process \
-    --simulator robocasa \
-    --image-publish \
-    --enable-offscreen \
-    --env_name PnPBottle \
-    --hand_control_device=pico \
-    --body_control_device=pico
-```
-
-The `tmux` session `g1_deployment` is created with panes for:
-- `control_data_teleop`: Main control loop, data collection, and teleoperation policy
-- `camera`: Camera forwarder
-- `camera_viewer`: Optional live camera feed
-
-Operations in the `controller` window (`control_data_teleop` pane, left):
-- `]`: Activate policy
-- `o`: Deactivate policy
-- `k`: Reset the simulation and policies
-- `` ` ``: Terminate the tmux session
-- `ctrl + d`: Exit the shell in the pane
-
-Operations in the `data exporter` window (`control_data_teleop` pane, right top):
-- Enter the task prompt
-
-Operations on Pico controllers:
-- `A`: Start/Stop recording
-- `B`: Discard trajectory
-
----
-
-## Running the Data Collection Stack on real Robot
-
-To run the data collection stack on the real robot, follow these steps on the robot and the host laptop respectively.
-
-**1. On Robot:**
-
-Run `composed_camera.py` to stream the ego-view:
-
-```bash
-source ~/g1env/bin/activate
-```
-
-```bash
-python -m gr00t_wbc.control.sensor.composed_camera \
-  --ego-view-camera <camera> \
-  --ego-view-device-id <device_id> \
-  --fps 30 \
-  --port 5556
-```
-Note: Replace `<camera>` with cameras you are using `usb or realsense` and `<device_id>` with your specific camera configuration.
-
-**2. On your system:**
-
-Run the full stack (control loop, teleop policy, and camera forwarder) via the deployment helper:
-```bash
-python scripts/deploy_g1.py \
-  --interface eno1 \
-  --camera_host <robot ip> \
-  --view_camera \
-  --no-with_hands \
-  --body_control_device=pico \
-  --fps 30
-```
-
-Operations in the `controller` window (`control_data_teleop` pane, left):
-- `c`: Start/Stop recording
 
 ---
 
@@ -195,21 +52,23 @@ python gr00t/eval/run_gr00t_server.py \
 
 ### Terminal 2 - Client:
 
-Run this command before running your script:
+Run `run_g1_control_loop.py`:
 ```bash
-export PYTHONPATH=$PYTHONPATH:/root/Projects/GR00T-WholeBodyControl
+python gr00t_wbc/control/main/teleop/run_g1_control_loop.py \
+  --interface eno1 \
+  --control_frequency 50 \
+  --no-with_hands
 ```
 
-Now run `deploy_g1_evaluation.py`:
+Run `run_gr00t_inference_policy.py`:
 ```bash
-python scripts/deploy_g1_evaluation.py \
-  --interface eno1 \
-  --camera_host <robot_ip> \
-  --camera_port 5556 \
-  --model_host <host_ip> \
+python scripts/run_gr00t_inference_policy.py \
+  --model_host <server ip> \
   --model_port 5555 \
-  --task_description "task_name" \
-  --no-with_hands \ 
-  --n_action_steps 20 \
-  --inference_frequency 30
+  --camera_host <robot ip> \
+  --camera_port 5556 \
+  --task_description "task name" \
+  --inference_frequency 30 \
+  --n_action_steps 25 \
+  --no-with_hands
 ```
