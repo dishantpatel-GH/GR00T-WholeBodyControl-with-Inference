@@ -33,13 +33,11 @@ cmd_scale: [2.0, 2.0, 0.25]
 
 # Number of actions and observations
 num_actions: 15
-num_obs: 570  # 76 * 6 (observation dimension * history length)
+num_obs: 516  # 86 * 6 (observation dimension * history length)
 obs_history_len: 6
 
 # Initial commands
 cmd_init: [0.0, 0.0, 0.0]
 height_cmd: 0.74
 freq_cmd: 1.50
-roll_cmd: 0.0
-pitch_cmd: 0.0
-yaw_cmd: 0.0
+rpy_cmd: [0.0, 0.0, 0.0]

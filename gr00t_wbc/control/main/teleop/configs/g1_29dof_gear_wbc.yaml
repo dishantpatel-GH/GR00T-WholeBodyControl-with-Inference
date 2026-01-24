@@ -1,4 +1,4 @@
-GEAR_WBC_CONFIG: "gr00t_wbc/sim2mujoco/resources/robots/g1/g1_gear_wbc.yaml"
+GEAR_WBC_CONFIG: "gr00t_wbc/control/main/teleop/configs/g1_gear_wbc.yaml"
 
 # copy from g1_43dof_hist.yaml
 ROBOT_TYPE: 'g1_29dof' # Robot name, "go2", "b2", "b2w", "h1", "go2w", "g1" 

@@ -74,14 +74,15 @@ class Gr00tInferenceConfig:
     """Whether robot has hands"""
     
     # Inference configuration
-    inference_frequency: float = 20.0
-    """Frequency of inference loop (Hz)"""
+    inference_frequency: float = 50.0
+    """Frequency of inference loop (Hz). Higher = smoother motion."""
     
-    n_action_steps: int = 10
-    """Number of action steps to execute before re-querying the model"""
+    n_action_steps: int = 32
+    """Number of action steps to execute before re-querying the model.
+    Higher values reduce stuttering but may reduce responsiveness."""
     
-    action_horizon: int = 30
-    """Total action horizon from model (from processor config)"""
+    action_horizon: int = 64
+    """Total action horizon from model. Should match server's --execution-horizon."""
     
     # Connection configuration  
     connection_timeout_ms: int = 15000
@@ -246,6 +247,11 @@ class Gr00tInferencePolicy:
             raise ValueError(
                 f"No ego_view image found in camera data. Available images: {list(image.get('images', {}).keys())}"
             )
+        
+        # Convert BGR to RGB (camera captures in BGR, model expects RGB)
+        # This fixes the "bluer" color issue
+        if len(ego_view.shape) == 3 and ego_view.shape[-1] == 3:
+            ego_view = ego_view[..., ::-1].copy()  # BGR -> RGB
         
         # Ensure image is uint8 and correct shape
         if ego_view.dtype != np.uint8:
