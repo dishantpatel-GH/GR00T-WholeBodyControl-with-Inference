@@ -1,0 +1,33 @@
+192.168.123.164
+
+# To run composed Camera
+python -m gr00t_wbc.control.sensor.composed_camera
+
+# Pack Environment:
+conda activate robot_env
+conda-pack -n robot_env -o robot_env.tar.gz
+
+# Copy Environment
+scp robot_env.tar.gz unitree@192.168.123.164:/home/unitree/
+
+# Unpack inside robot
+mkdir ~/robot_env
+tar -xzf robot_env.tar.gz -C ~/robot_env
+
+# Fix path in robot
+cd ~/robot_env
+./bin/conda-unpack
+
+# Activate Env
+source ~/robot_env/bin/activate
+source ~/g1env/bin/activate
+
+Output:
+outputs
+
+HuggingFace:
+dishantpatel1207@gmail.com
+Dishant1234@*
+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
+
+export HF_TOKEN="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"

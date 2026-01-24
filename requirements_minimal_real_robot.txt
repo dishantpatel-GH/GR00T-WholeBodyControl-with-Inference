@@ -1,0 +1,88 @@
+# =============================================================================
+# Minimal Requirements for Real Robot Control
+# =============================================================================
+# Supports ONLY these two files on real robot:
+#   - scripts/run_gr00t_inference_policy.py
+#   - gr00t_wbc/control/main/teleop/run_g1_control_loop.py
+#
+# Install with: pip install -r requirements_minimal_real_robot.txt
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Core numerical computing
+# -----------------------------------------------------------------------------
+numpy==1.26.4
+scipy==1.15.3
+
+# -----------------------------------------------------------------------------
+# PyTorch with CUDA 12.4 (pin version for compatibility)
+# -----------------------------------------------------------------------------
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.5.1
+
+# -----------------------------------------------------------------------------
+# Robot kinematics and motion control
+# -----------------------------------------------------------------------------
+pin                        # Pinocchio - rigid body dynamics
+pin-pink                   # Differential IK solver
+qpsolvers[osqp,quadprog]   # QP solvers for IK optimization
+
+# -----------------------------------------------------------------------------
+# Neural network inference (lower body policy)
+# -----------------------------------------------------------------------------
+onnxruntime                # ONNX model inference for gear_wbc policy
+
+# -----------------------------------------------------------------------------
+# Environment interface
+# -----------------------------------------------------------------------------
+gymnasium                  # Gym interface for robot environment
+
+# -----------------------------------------------------------------------------
+# Communication protocols
+# -----------------------------------------------------------------------------
+pyzmq                      # ZeroMQ - camera server & policy server client
+msgpack                    # Fast serialization for ROS messages
+msgpack-numpy              # NumPy array support for msgpack
+
+# -----------------------------------------------------------------------------
+# Image processing
+# -----------------------------------------------------------------------------
+opencv-python              # Image decoding from camera server
+
+# -----------------------------------------------------------------------------
+# CLI and utilities
+# -----------------------------------------------------------------------------
+tyro                       # CLI argument parsing
+termcolor                  # Colored terminal output
+loguru                     # Logging
+sshkeyboard                # Keyboard input for control
+
+# =============================================================================
+# INSTALLED VIA CONDA/MAMBA (not pip):
+# =============================================================================
+# cyclonedds               # DDS middleware - install via: mamba install cyclonedds-python
+# ros-humble-ros-base      # ROS2 core - install via robostack
+# cv-bridge                # ROS image bridge - comes with ROS
+
+# =============================================================================
+# NOT INCLUDED (not needed for real robot control):
+# =============================================================================
+# av               - video encoding (data collection only)
+# pyttsx3          - text to speech
+# matplotlib       - plotting/visualization
+# hydra-core       - config management (not used by these files)
+# ray              - distributed computing
+# mujoco           - simulation only
+# flask*           - web server (GUI)
+# meshcat*         - visualization
+# rerun-sdk        - visualization
+# pygame           - simulation input
+# PyQt6            - GUI
+# lerobot          - dataset format
+# datasets         - data processing
+# pandas           - data processing  
+# imageio          - image/video IO
+# lark             - parser
+# evdev            - joycon controller
+# depthai          - OAK camera (runs on separate camera server)
+# pyrealsense2     - RealSense camera (runs on separate camera server)
