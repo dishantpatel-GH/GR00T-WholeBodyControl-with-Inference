@@ -11,6 +11,10 @@ from gr00t_wbc.control.envs.g1.utils.state_processor import HandStateProcessor
 from gr00t_wbc.control.envs.g1.utils.command_sender import InspireHandCommandSender
 from gr00t_wbc.control.envs.g1.utils.state_processor import InspireHandStateProcessor
 
+# Import the Inspire FTP classes
+from gr00t_wbc.control.envs.g1.utils.command_sender import InspireFTPHandCommandSender
+from gr00t_wbc.control.envs.g1.utils.state_processor import InspireFTPHandStateProcessor
+
 
 class G1ThreeFingerHand(Env):
     # ... (Keep existing implementation unchanged) ...
@@ -114,3 +118,54 @@ class G1InspireHand(Env):
 
     def calibrate_hand(self):
         print(f"Inspire Hand ({'Left' if self.is_left else 'Right'}) calibration not required.")
+
+
+class G1InspireFTPHand(Env):
+    """Hand environment for Inspire FTP hands (6 DOF, no padding)."""
+
+    def __init__(self, is_left: bool = True):
+        super().__init__()
+        self.is_left = is_left
+        self.hand_state_processor = InspireFTPHandStateProcessor(is_left=self.is_left)
+        self.hand_command_sender = InspireFTPHandCommandSender(is_left=self.is_left)
+        self.num_dof = 6
+
+    def observe(self) -> dict[str, any]:
+        # Processor returns (1, 24) = 6*4
+        hand_state = self.hand_state_processor._prepare_low_state()
+
+        hand_q = hand_state[0, : self.num_dof]
+        hand_dq = hand_state[0, self.num_dof : 2 * self.num_dof]
+        hand_tau_est = hand_state[0, 2 * self.num_dof : 3 * self.num_dof]
+        hand_ddq = hand_state[0, 3 * self.num_dof : 4 * self.num_dof]
+
+        return {
+            "hand_q": hand_q,
+            "hand_dq": hand_dq,
+            "hand_ddq": hand_ddq,
+            "hand_tau_est": hand_tau_est,
+        }
+
+    def queue_action(self, action: dict[str, any]):
+        if "hand_q" in action:
+            self.hand_command_sender.send_command(action["hand_q"])
+
+    def observation_space(self) -> gym.Space:
+        return gym.spaces.Dict(
+            {
+                "hand_q": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_dof,)),
+                "hand_dq": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_dof,)),
+                "hand_ddq": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_dof,)),
+                "hand_tau_est": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_dof,)),
+            }
+        )
+
+    def action_space(self) -> gym.Space:
+        return gym.spaces.Dict(
+            {"hand_q": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_dof,))}
+        )
+
+    def calibrate_hand(self):
+        print(
+            f"Inspire FTP Hand ({'Left' if self.is_left else 'Right'}) calibration not required."
+        )

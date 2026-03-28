@@ -186,3 +186,24 @@ class InspireHandStateProcessor:
             .reshape(1, -1)
         )
         return state_data
+
+
+class InspireFTPHandStateProcessor:
+    """State processor for Inspire FTP hands (6 DOF, no padding)."""
+
+    def __init__(self, is_left: bool = True):
+        self.is_left = is_left
+        from gr00t_wbc.control.envs.g1.utils.inspire_ftp_driver import InspireFTPHandDriver
+
+        self.driver = InspireFTPHandDriver()
+        self.num_dof = 6
+
+    def _prepare_low_state(self) -> np.ndarray:
+        q, dq, tau = self.driver.get_hand_state(self.is_left)
+        ddq = np.zeros(self.num_dof)
+
+        state_data = (
+            np.concatenate([q, dq, tau, ddq], axis=0).astype(np.float64).reshape(1, -1)
+        )
+        # Shape: (1, 24) = 6*4
+        return state_data

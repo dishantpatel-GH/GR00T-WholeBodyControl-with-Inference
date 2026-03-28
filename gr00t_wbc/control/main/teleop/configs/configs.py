@@ -98,8 +98,8 @@ class BaseConfig(ArgsConfigTemplate):
     with_hands: bool = True
     """Enable hand functionality. When False, robot operates without hands."""
 
-    hand_type: Literal["dex3", "inspire"] = "dex3"
-    """Type of hand to use. Options: 'dex3' (default), 'inspire'."""
+    hand_type: Literal["dex3", "inspire", "inspire_ftp"] = "inspire_ftp"
+    """Type of hand to use. Options: 'dex3', 'inspire', 'inspire_ftp'."""
 
     high_elbow_pose: bool = False
     """Enable high elbow pose configuration for default joint positions."""

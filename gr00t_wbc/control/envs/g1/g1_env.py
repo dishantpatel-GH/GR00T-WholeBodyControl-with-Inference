@@ -13,7 +13,7 @@ from scipy.spatial.transform import Rotation as R
 
 from gr00t_wbc.control.base.humanoid_env import Hands, HumanoidEnv
 from gr00t_wbc.control.envs.g1.g1_body import G1Body
-from gr00t_wbc.control.envs.g1.g1_hand import G1ThreeFingerHand, G1InspireHand
+from gr00t_wbc.control.envs.g1.g1_hand import G1InspireFTPHand, G1InspireHand, G1ThreeFingerHand
 from gr00t_wbc.control.envs.g1.sim.simulator_factory import init_channel
 from gr00t_wbc.control.envs.g1.utils.joint_safety import JointSafetyMonitor
 from gr00t_wbc.control.robot_model.robot_model import RobotModel
@@ -63,7 +63,11 @@ class G1Env(HumanoidEnv):
 
         if self.with_hands:
             self._hands = Hands()
-            if self.hand_type == "inspire":
+            if self.hand_type == "inspire_ftp":
+                print("[G1Env] Initializing Inspire FTP Hands...")
+                self._hands.left = G1InspireFTPHand(is_left=True)
+                self._hands.right = G1InspireFTPHand(is_left=False)
+            elif self.hand_type == "inspire":
                 print("[G1Env] Initializing Inspire Hands...")
                 self._hands.left = G1InspireHand(is_left=True)
                 self._hands.right = G1InspireHand(is_left=False)

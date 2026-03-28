@@ -60,8 +60,11 @@ def main(config: ControlLoopConfig):
     telemetry = Telemetry(window_size=100)
 
     waist_location = "lower_and_upper_body" if config.enable_waist else "lower_body"
+    hand_type = config.hand_type if config.with_hands else None
     robot_model = instantiate_g1_robot_model(
-        waist_location=waist_location, high_elbow_pose=config.high_elbow_pose
+        waist_location=waist_location,
+        high_elbow_pose=config.high_elbow_pose,
+        hand_type=hand_type,
     )
 
     env = G1Env(

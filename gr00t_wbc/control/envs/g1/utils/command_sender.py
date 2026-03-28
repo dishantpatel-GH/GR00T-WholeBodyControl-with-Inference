@@ -159,3 +159,17 @@ class InspireHandCommandSender:
         # Inspire driver handles the thread-locking and publishing
         # cmd is expected to be an array of angles.
         self.driver.set_hand_cmd(self.is_left, cmd)
+
+
+class InspireFTPHandCommandSender:
+    """Command sender for Inspire FTP hands via the Headless_driver_double.py DDS bridge."""
+
+    def __init__(self, is_left: bool = True):
+        self.is_left = is_left
+        from gr00t_wbc.control.envs.g1.utils.inspire_ftp_driver import InspireFTPHandDriver
+
+        self.driver = InspireFTPHandDriver()
+
+    def send_command(self, cmd: np.ndarray):
+        # cmd is in normalized 0-1 range (matching dataset values)
+        self.driver.set_hand_cmd(self.is_left, cmd)

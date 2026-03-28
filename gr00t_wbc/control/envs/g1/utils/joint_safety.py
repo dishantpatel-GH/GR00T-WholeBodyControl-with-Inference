@@ -19,7 +19,7 @@ class JointSafetyMonitor:
     """Monitor joint velocities for G1 robot arms and hands."""
 
     # Velocity limits in rad/s
-    ARM_VELOCITY_LIMIT = 6.0  # rad/s for arm joints
+    ARM_VELOCITY_LIMIT = 10.0  # rad/s for arm joints
     HAND_VELOCITY_LIMIT = 50.0  # rad/s for finger joints
 
     def __init__(self, robot_model, enable_viz: bool = False, env_type: str = "real"):
