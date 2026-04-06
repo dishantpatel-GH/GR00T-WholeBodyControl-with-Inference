@@ -64,6 +64,21 @@ def main(config: ControlLoopConfig):
         waist_location=waist_location, high_elbow_pose=config.high_elbow_pose
     )
 
+    # For Inspire FTP hands: set initial hand pose to fully open (1000)
+    # so hands open when arms move to initial pose at startup.
+    # This must be done BEFORE wbc_policy creation (which reads initial_body_pose).
+    _inspire_ftp_enabled = (
+        wbc_config.get("with_hands", False)
+        and wbc_config.get("HAND_TYPE", "dex3") == "inspire"
+    )
+    if _inspire_ftp_enabled:
+        INSPIRE_FTP_OPEN = 1000.0
+        for idx in robot_model.get_joint_group_indices("left_hand"):
+            robot_model.initial_body_pose[idx] = INSPIRE_FTP_OPEN
+        for idx in robot_model.get_joint_group_indices("right_hand"):
+            robot_model.initial_body_pose[idx] = INSPIRE_FTP_OPEN
+        print(f"[Inspire FTP] Initial hand pose set to OPEN ({INSPIRE_FTP_OPEN})")
+
     env = G1Env(
         env_name=config.env_name,
         robot_model=robot_model,
